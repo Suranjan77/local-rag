@@ -1,68 +1,57 @@
-import os
 from bs4 import BeautifulSoup
-import warnings
+from pathlib import Path
+import logging
+import re
 
-# Suppress warnings that might appear if parsing non-standard HTML fragments
-warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
+_log = logging.getLogger(__name__)
 
-def clean_html_from_text(text):
-    """
-    Uses BeautifulSoup to extract text and remove HTML tags.
-    """
-    # 'html.parser' is fast and built-in, but 'lxml' is faster if installed
-    soup = BeautifulSoup(text, "html.parser")
-    return soup.get_text()
+def clean_html_from_text(text: str):
+    soup = BeautifulSoup(text, "lxml")
+    cleaned_text = soup.get_text()
 
-def process_folder(folder_path):
-    """
-    Recursively finds all .md files in the folder and removes HTML tags.
-    """
+    # 1. Remove lines that only contain the "|" character (and optional whitespace)
+    # (?m) enables multi-line mode so ^ and $ match the start/end of lines
+    cleaned_text = re.sub(r'(?m)^\s*\|\s*$', '', cleaned_text)
+    
+    # Replace 2 or more consecutive newlines with exactly 2 newlines
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+    
+    return cleaned_text
+
+def process_md_files(md_files: list[Path]):
     files_processed = 0
     errors = 0
 
-    print(f"--- Starting cleanup in: {folder_path} ---")
+    for md_file in md_files:
+        try:
+            with md_file.open('r', encoding='utf-8') as f:
+                original_content = f.read()
 
-    # os.walk allows us to look into subdirectories as well
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.endswith(".md"):
-                file_path = os.path.join(root, file)
-                
-                try:
-                    # 1. Read the file
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        original_content = f.read()
+                cleaned_content = clean_html_from_text(original_content)
 
-                    # 2. Clean the content
-                    cleaned_content = clean_html_from_text(original_content)
-
-                    # 3. Optimization: Only write if changes were actually made
-                    if original_content != cleaned_content:
-                        with open(file_path, 'w', encoding='utf-8') as f:
-                            f.write(cleaned_content)
-                        print(f"cleaned: {file}")
+                # Optimisation: Only write if changes were actually made
+                if original_content != cleaned_content:
+                    with md_file.open('w', encoding='utf-8') as f:
+                        num_char_written = f.write(cleaned_content)
+                        print(f"cleaned: {md_file.name} written {num_char_written} characters.")
                         files_processed += 1
-                    else:
-                        # Optional: Verify files that didn't need changes
-                        # print(f"skipped (no HTML): {file}")
-                        pass
+                else:
+                    pass
 
-                except Exception as e:
-                    print(f"ERROR in {file}: {e}")
-                    errors += 1
+        except Exception as e:
+            print(f"ERROR in {md_file.name}: {e}")
+            errors += 1
 
-    print("--- Processing Complete ---")
     print(f"Total files updated: {files_processed}")
     print(f"Total errors: {errors}")
 
 if __name__ == "__main__":
-    # --- CONFIGURATION ---
-    # Change this to the path of the folder you want to clean
-    # You can use "." for the current directory
-    TARGET_FOLDER = "/home/sur/repo/local-rag/data/mds/" 
+    logging.basicConfig(level=logging.DEBUG)
+    data_folder = Path(__file__).parent / "../../out/" 
     
-    # Check if path exists before running
-    if os.path.exists(TARGET_FOLDER):
-        process_folder(TARGET_FOLDER)
-    else:
-        print(f"Error: The folder '{TARGET_FOLDER}' does not exist.")
+    # Read all markdown files inside the out folder
+    md_docs = [doc_path for doc_path in data_folder.glob('**/*.md')]
+    
+    # md_docs = [data_folder / "test_doc.md"]
+    
+    process_md_files(md_docs)
