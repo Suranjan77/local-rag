@@ -4,9 +4,8 @@ from pathlib import Path
 
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, PictureDescriptionApiOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
-
 _log = logging.getLogger(__name__)
 
 def batch_parse_to_md(input_documents: list[Path]):
@@ -17,8 +16,22 @@ def batch_parse_to_md(input_documents: list[Path]):
         pipeline_options.do_ocr = False
         pipeline_options.do_table_structure = False
         pipeline_options.do_formula_enrichment = True
+        pipeline_options.do_code_enrichment = True        
+        pipeline_options.do_picture_description = True
+
+        pipeline_options.enable_remote_services = True
+        pipeline_options.picture_description_options = PictureDescriptionApiOptions(
+            url="http://localhost:11434/v1/chat/completions", # Local llama.cpp server
+            prompt="Describe the diagram in maximum of 5 sentences. Be concise and accurate.",
+            params={
+                "model": "llama-vision:latest", 
+                "temperature": 0.7,
+                "max_tokens": 200
+            }
+        )
+
         pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=4, device=AcceleratorDevice.AUTO
+            num_threads=16, device=AcceleratorDevice.AUTO
         )
 
         doc_converter = DocumentConverter(
@@ -43,7 +56,7 @@ def batch_parse_to_md(input_documents: list[Path]):
             print(f"Written {num_of_char_written} characters.")
 
 if __name__ == "__main__":
-    data_folder = Path(__file__).parent / "../../data"
+    data_folder = Path(__file__).parent / "../../data/pdfs"
     # Read all pdfs inside the data folder
     # pdf_docs = [doc_path for doc_path in (data_folder / "pdfs").glob('**/*.pdf')]
     pdf_docs = [data_folder / "test_doc.pdf"]
