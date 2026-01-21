@@ -1,37 +1,36 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 4.0)
+
 project(ChatAgent LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Optimisation flags for Ryzen AI Max+
-# if(MSVC)
-#    add_compile_options(/O2 /arch:AVX2)
-# else()
-#    add_compile_options(-O3 -march=native -funroll-loops)
-# endif()
+# Force use llvm's lib instead of GCC's libstd++ (which gets chosen by default in Linux)
+# However, this requires installing libc++ in the OS
+add_compile_options(-stdlib=libc++)
+add_link_options(-stdlib=libc++)
 
-# --- Dependencies ---
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # llama.cpp
 set(LLAMA_BUILD_COMMON ON)
 add_subdirectory(external/llama.cpp)
 
-# HNSWLib
-include_directories(external/hnswlib)
-
 # Nlohmann JSON
 add_subdirectory(external/json)
 
-# --- Main Executable ---
-add_executable(agent 
-    src/main.cpp 
+add_executable(agent
+        src/main.cpp
 )
 
-target_include_directories(agent PRIVATE src)
+target_include_directories(agent PRIVATE
+        src
+        external/hnswlib
+)
 
-# Link Dependencies
-target_link_libraries(agent PRIVATE 
-    llama 
-    nlohmann_json::nlohmann_json
+target_link_libraries(agent PRIVATE
+        llama
+        nlohmann_json::nlohmann_json
 )

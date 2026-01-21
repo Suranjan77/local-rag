@@ -34,23 +34,20 @@ public:
     LlamaEngine(const std::string& embed_path, const std::string& chat_path) {
         llama_backend_init();
 
-        // 1. Load Embedding Model
-        auto mparams = llama_model_default_params();
-        mparams.n_gpu_layers = 99; // Offload all
-        embed_model.reset(llama_load_model_from_file(embed_path.c_str(), mparams));
+        auto m_params = llama_model_default_params();
+        embed_model.reset(llama_model_load_from_file(embed_path.c_str(), m_params));
 
-        auto cparams = llama_context_default_params();
-        cparams.embeddings = true;
-        cparams.n_ctx = 2048;
-        embed_ctx.reset(llama_new_context_with_model(embed_model.get(), cparams));
+        auto c_params = llama_context_default_params();
+        c_params.embeddings = true;
+        c_params.n_ctx = 4096; // Do not change this, as the embeddings of the documents are of this dimension
+        embed_ctx.reset(llama_init_from_model(embed_model.get(), c_params));
 
-        // 2. Load Chat Model
-        mparams.n_gpu_layers = 99;
-        chat_model.reset(llama_load_model_from_file(chat_path.c_str(), mparams));
+        // Load Chat Model
+        chat_model.reset(llama_model_load_from_file(chat_path.c_str(), m_params));
 
-        cparams = llama_context_default_params();
-        cparams.n_ctx = 8192; // Larger context for RAG
-        chat_ctx.reset(llama_new_context_with_model(chat_model.get(), cparams));
+        c_params = llama_context_default_params();
+        c_params.n_ctx = 8192; // Larger context for RAG
+        chat_ctx.reset(llama_init_from_model(chat_model.get(), c_params));
 
         // Initialize batch
         batch = llama_batch_init(8192, 0, 1);
