@@ -8,7 +8,7 @@ _log = logging.getLogger(__name__)
 
 MODEL_PATH = "/home/sur/quant_models/Qwen3-Embedding-8B-Q8_0.gguf"
 
-def embedd_chunks(chunk_files: list[Path]):
+def embedd_chunks(files: list[Path]):
     embedding_model = Llama(
             model_path=MODEL_PATH,
             embedding=True,
@@ -19,7 +19,7 @@ def embedd_chunks(chunk_files: list[Path]):
     output_path = Path(__file__).parent / "../../out/embeddings"
     output_path.mkdir(parents=True, exist_ok=True)
 
-    for chunk_file in chunk_files:
+    for chunk_file in files:
         with chunk_file.open("r", encoding="utf-8") as f:
             chunks = json.load(f)
             chunk_contents = [c["content"]for c in chunks]
