@@ -4,28 +4,35 @@ from pathlib import Path
 
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableStructureOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 
 _log = logging.getLogger(__name__)
 
 def batch_parse_to_md(input_documents: list[Path]):
     logging.basicConfig(level=logging.DEBUG)
 
-    for input_doc_path in input_documents:
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = False
-        pipeline_options.do_table_structure = False
-        pipeline_options.do_formula_enrichment = True
-        pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=4, device=AcceleratorDevice.AUTO
-        )
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = True
+    pipeline_options.ocr_options.lang=["en"]
+    pipeline_options.do_table_structure = True
+    pipeline_options.table_structure_options = TableStructureOptions(do_cell_matching=True)
 
-        doc_converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-            }
-        )
+    pipeline_options.do_formula_enrichment = True
+    pipeline_options.accelerator_options = AcceleratorOptions(
+        num_threads=32, device=AcceleratorDevice.AUTO
+    )
+
+    doc_converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_options=pipeline_options
+            ),
+        }
+    )
+
+    for input_doc_path in input_documents:
         
         start_time = time.time()
         conv_result = doc_converter.convert(input_doc_path)
@@ -43,8 +50,8 @@ def batch_parse_to_md(input_documents: list[Path]):
             print(f"Written {num_of_char_written} characters.")
 
 if __name__ == "__main__":
-    data_folder = Path(__file__).parent / "../../data"
+    data_folder = Path(__file__).parent / "../../data/pdfs"
     # Read all pdfs inside the data folder
-    # pdf_docs = [doc_path for doc_path in (data_folder / "pdfs").glob('**/*.pdf')]
-    pdf_docs = [data_folder / "test_doc.pdf"]
+    pdf_docs = [doc_path for doc_path in (data_folder).glob('**/*.pdf')]
+    # pdf_docs = [data_folder / "test_doc.pdf"]
     batch_parse_to_md(pdf_docs)

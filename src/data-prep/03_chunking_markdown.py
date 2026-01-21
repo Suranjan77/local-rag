@@ -43,8 +43,8 @@ if __name__ == "__main__":
     data_folder = Path(__file__).parent / "../../out/" 
     
     # Read all markdown files inside the out folder
-    md_docs = [doc_path for doc_path in data_folder.glob('**/*.md')]
+    # md_docs = [doc_path for doc_path in data_folder.glob('**/*.md')]
     
-    # md_docs = [data_folder / "test_doc.md"]
+    md_docs = [data_folder / "test_doc.md"]
     
     batch_chunk_md(md_docs)
