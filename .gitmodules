@@ -1,9 +1,0 @@
-[submodule "external/hnswlib"]
-	path = external/hnswlib
-	url = https://github.com/nmslib/hnswlib
-[submodule "external/json"]
-	path = external/json
-	url = https://github.com/nlohmann/json
-[submodule "external/llama.cpp"]
-	path = external/llama.cpp
-	url = https://github.com/ggml-org/llama.cpp
