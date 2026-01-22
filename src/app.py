@@ -125,15 +125,12 @@ class LocalRAG:
         return results
 
     def chat(self, user_query: str):
-        # Retrieve context
         retrieved = self.search(user_query, top_k=5)
         
-        # Build Context String
         context_str = ""
         for i, doc in enumerate(retrieved):
             context_str += f"\n[Document {i+1}]:\n{doc['content']}\n"
 
-        # Construct System Prompt
         system_msg = (
             "You are a precise technical assistant. "
             "Answer the user's question using ONLY the context provided below. "
@@ -145,8 +142,6 @@ class LocalRAG:
             f"Question: {user_query}"
         )
 
-        # Generate
-        # stream=True makes it feel faster/more responsive
         stream = self.chat_model.create_chat_completion(
             messages=[
                 {"role": "system", "content": system_msg},
@@ -181,7 +176,7 @@ if __name__ == "__main__":
         )
 
         print("\n" + "="*50)
-        print(f" RAG System Online | Hardware: Ryzen AI Max+ 395")
+        print(f" RAG System Online")
         print("="*50 + "\n")
 
         while True:
