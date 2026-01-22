@@ -5,16 +5,14 @@ import faiss
 from pathlib import Path
 from llama_cpp import Llama
 
-# --- Configuration ---
-ROOT_DIR = Path(__file__).parent / "../../"
+ROOT_DIR = Path(__file__).parent / "../"
 EMBEDDING_MODEL_PATH = ROOT_DIR / "models/Qwen3-Embedding-8B-Q8_0.gguf"
 CHAT_MODEL_PATH = ROOT_DIR / "models/Qwen3-30B-A3B-Thinking-2507-Q8_0.gguf"
 CHUNKS_DIR = ROOT_DIR / "out/chunks"
 EMBEDS_DIR = ROOT_DIR / "out/embeddings"
 
-# Logging Setup
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s | %(levelname)s | %(message)s',
     datefmt='%H:%M:%S'
 )
@@ -24,14 +22,14 @@ class LocalRAG:
     def __init__(self, embed_path: str, chat_path: str, chunks_dir: Path, embeds_dir: Path):
         self.chunks_dir = chunks_dir
         self.embeds_dir = embeds_dir
-        self.text_registry = []  # Holds the text content
-        self.index = None        # The FAISS Index
+        self.text_registry = []
+        self.index = None
         
         logger.info("Initializing Embedding Model...")
         self.embed_model = Llama(
             model_path=embed_path,
             embedding=True,
-            n_ctx=4096,         # Sufficient for queries
+            n_ctx=4096,
             n_gpu_layers=-1,
             verbose=False
         )
@@ -97,9 +95,6 @@ class LocalRAG:
         if len(self.text_registry) != embedding_matrix.shape[0]:
             raise ValueError(f"CRITICAL: Data mismatch. Text chunks: {len(self.text_registry)}, Vectors: {embedding_matrix.shape[0]}")
 
-        # Build FAISS Index
-        # IndexFlatIP uses Inner Product. Since vectors are normalized -> Cosine Similarity.
-        # This is exact search (Brute Force), optimized by AVX-512.
         d = embedding_matrix.shape[1]
         self.index = faiss.IndexFlatIP(d)
         self.index.add(embedding_matrix)
@@ -108,7 +103,7 @@ class LocalRAG:
         logger.info(f"FAISS is using instructions: {faiss.get_compile_options()}")
 
     def search(self, query: str, top_k: int = 3):
-        res = self.embed_model.create_embedding(query)
+        res = self.embed_model.create_embedding(input=query)
         q_vec = np.array(res['data'][0]['embedding'], dtype=np.float32)
 
         # Normalize (CRITICAL for Cosine Similarity via Inner Product)
@@ -116,7 +111,6 @@ class LocalRAG:
         if norm > 0:
             q_vec = q_vec / norm
         
-        # Reshape for FAISS
         q_vec = q_vec.reshape(1, -1)
 
         distances, indices = self.index.search(q_vec, top_k)
@@ -180,8 +174,8 @@ class LocalRAG:
 if __name__ == "__main__":
     try:
         app = LocalRAG(
-            embed_path=EMBEDDING_MODEL_PATH,
-            chat_path=CHAT_MODEL_PATH,
+            embed_path=str(EMBEDDING_MODEL_PATH),
+            chat_path=str(CHAT_MODEL_PATH),
             chunks_dir=CHUNKS_DIR,
             embeds_dir=EMBEDS_DIR
         )
